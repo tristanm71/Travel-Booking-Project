@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Sign Up</h1>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <p class="text-center" style="color:red">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    <div class="container px-5 d-flex justify-content-center">
+        <div class="row">
+            <form method="POST" action="{{ url_for('register') }}" class="w-100 gap-2 mb-5" style="max-width: 300px;">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Email</label>
+                    <input type="text" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required autocomplete="off">
+                </div>
+                <div class="d-grid gap-2 justify-content-center mt-3">
+                    <button type="submit" class="btn btn-primary" style="max-width: 100px; width: 100px;">Sign Up</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

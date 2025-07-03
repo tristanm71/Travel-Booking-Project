@@ -34,8 +34,14 @@
                     <li><a href="#" class="nav-link px-2">FAQs</a></li>
                     <li><a href="#" class="nav-link px-2">About</a></li>
                 </ul> -->
-                <div class="col-md-3 text-end"> <button type="button" class="btn btn-outline-primary me-2">Login</button>
-                    <button type="button" class="btn btn-primary">Sign-up</button> </div>
+                <div class="col-md-3 text-end">
+                    {% if not logged_in %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary me-2">Login</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary">Sign Up</a>
+                    {% else %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+                    {% endif %}
+                </div>
             </header>
         </div>
         {% endblock %}
@@ -44,7 +50,7 @@
     <div id="content">
         {% block content %}{% endblock %}
     </div>
-    
+
     <div id="footer">
         {% block footer %}
         <div class="container">
