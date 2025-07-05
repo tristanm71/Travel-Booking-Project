@@ -16,6 +16,7 @@ load_dotenv()
 
 session = requests_cache.CachedSession('api_cache')
 
+#gathers API token for Amadeus and saves it on the env file
 def get_token():
     url = "https://test.api.amadeus.com/v1/security/oauth2/token"
     headers = {
@@ -36,14 +37,18 @@ def get_token():
     os.environ["AMADEUS_ACCESS_TOKEN"] = token
 
 
+#set up flask app
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_KEY")
 
+#set up bootstrap styling
 bootstrap = Bootstrap5(app)
  
+ #for db models
 class Base(DeclarativeBase):
     pass
 
+#db set up
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
@@ -75,6 +80,7 @@ class Trip(db.Model):
 with app.app_context():
     db.create_all()
 
+#user authentication
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -87,7 +93,7 @@ def home():
     today = datetime.now
     return render_template("index.html", now=today, logged_in=current_user.is_authenticated)
 
-
+#register user with validation
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -117,7 +123,7 @@ def register():
     
     return render_template("register.html", logged_in=current_user.is_authenticated)
 
-
+#login user with validation
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -151,7 +157,9 @@ def logout():
 @app.route("/search", methods=["GET", "POST"])
 def search():
     if request.method == "POST":
+        #validates the city inputted by the user, while gathering its location
         destination = request.form.get("destination")
+
         def get_city():
             url = os.environ.get("AMADEUS_BASE_URL") + "/reference-data/locations"
             headers = {
@@ -164,8 +172,10 @@ def search():
             response = session.get(url, params=params, headers=headers)
             return response
 
-        response = get_city()
 
+        response = get_city()
+        
+        #check if token is expired
         if response.status_code != 200:
             print("poo")
             get_token()
@@ -175,7 +185,7 @@ def search():
 
         if response["meta"]["count"] < 1:
             flash("City does not exist")
-            return redirect(url_for("search"))
+            return redirect(url_for("home"))
         
         return redirect(url_for("home"))
     return render_template("search.html")

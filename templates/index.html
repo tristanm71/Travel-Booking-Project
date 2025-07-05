@@ -52,6 +52,17 @@
         </div>
       </form>
     </div>
+    <div class="container px-3 d-flex justify-content-center">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+        <p class="text-center" style="color:red">{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+    </div>
     
   {% endblock %}
 </div>
