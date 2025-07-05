@@ -28,10 +28,10 @@
     </div>
     
     <div class="container px-5 d-flex justify-content-center">
-      <form class="w-100" style="max-width: 900px;">
+      <form method="POST" action="{{ url_for('search') }}"class="w-100" style="max-width: 900px;">
         <div class="row mb-3">
           <div class="col">
-            <label for="destination">Enter Destination</label>
+            <label for="destination">Enter Destination City</label>
             <input type="text" name="destination" class="form-control" id="destination" placeholder="e.g., Paris, New York, Tokyo">
           </div>
           <div class="col">

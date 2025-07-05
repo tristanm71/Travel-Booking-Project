@@ -8,8 +8,33 @@ from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user
+import requests_cache
+from datetime import datetime
+import requests
 
 load_dotenv()
+
+session = requests_cache.CachedSession('api_cache')
+
+def get_token():
+    url = "https://test.api.amadeus.com/v1/security/oauth2/token"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": f"{os.environ.get("AMADEUS_API_KEY")}",         # Replace with your actual client ID
+        "client_secret": f"{os.environ.get("AMADEUS_API_SECRET")}"  # Replace with your actual client secret
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    # To see the response
+    print(response.status_code)
+    table = response.json()
+    token = table["access_token"]
+    os.environ["AMADEUS_ACCESS_TOKEN"] = token
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_KEY")
@@ -122,6 +147,38 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
+
+@app.route("/search", methods=["GET", "POST"])
+def search():
+    if request.method == "POST":
+        destination = request.form.get("destination")
+        def get_city():
+            url = os.environ.get("AMADEUS_BASE_URL") + "/reference-data/locations"
+            headers = {
+                "Authorization": f"Bearer {os.environ.get("AMADEUS_ACCESS_TOKEN")}"
+            }
+            params = {
+                "subType": ["CITY"],
+                "keyword": destination
+            }
+            response = session.get(url, params=params, headers=headers)
+            return response
+
+        response = get_city()
+
+        if response.status_code != 200:
+            print("poo")
+            get_token()
+
+        response = get_city()
+        response = response.json()
+
+        if response["meta"]["count"] < 1:
+            flash("City does not exist")
+            return redirect(url_for("search"))
+        
+        return redirect(url_for("home"))
+    return render_template("search.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
