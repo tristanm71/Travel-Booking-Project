@@ -1,1 +1,36 @@
 {% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5 mb-5 px-5 d-flex justify-content-center">
+    <form method="POST" action="{{ url_for("flight_search")}}" class="w-100" style="max-width: 900px;">
+        <div class="row mb-3">
+            <div class="col-4">
+                <select class="form-select" name="arrival" aria-label="Select Arrival Airport">
+                    <option selected>Select Arrival Airport</option>
+                    {% for airport in arrival %}
+                    <option value="{{airport['iataCode']}}">
+                        {{airport['name']}}: {{airport["address"]["cityName"]}}, {% if airport["address"]["stateCode"]
+                        %}{{airport["address"]["stateCode"]}} {% else %} {{airport["address"]["countryCode"]}} {% endif
+                        %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-4">
+                <select class="form-select" aria-label="Select Destination Airport">
+                    <option selected>Select Destination Airport</option>
+                    {% for airport in destination %}
+                    <option value="{{airport['iataCode']}}">
+                        {{airport['name']}}: {{airport["address"]["cityName"]}}, {% if airport["address"]["stateCode"]
+                        %}{{airport["address"]["stateCode"]}} {% else %} {{airport["address"]["countryCode"]}} {% endif
+                        %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Search Airports</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

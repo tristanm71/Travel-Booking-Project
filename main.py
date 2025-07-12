@@ -154,41 +154,106 @@ def logout():
     return redirect(url_for('home'))
 
 
-@app.route("/search", methods=["GET", "POST"])
-def search():
+def get_city(destination):
+    url = "https://api.api-ninjas.com/v1/city"
+    headers = {
+        "X-Api-Key": os.environ.get("API_NINJAS_KEY")
+    }
+    params = {
+        "name": destination
+    }
+    response = session.get(url, params=params, headers=headers)
+    return response
+
+def get_airports(longitude, latitude):
+    url = os.environ.get("AMADEUS_BASE_URL") + "/reference-data/locations/airports"
+    headers = {
+        "Authorization": f"Bearer {os.environ.get("AMADEUS_ACCESS_TOKEN")}"
+    }
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "page[limit]": 5
+    }
+    response = session.get(url, params=params, headers=headers)
+    return response
+    
+
+@app.route("/find-airport", methods=["GET", "POST"])
+def find_airport():
     if request.method == "POST":
-        #validates the city inputted by the user, while gathering its location
-        destination = request.form.get("destination")
-
-        def get_city():
-            url = os.environ.get("AMADEUS_BASE_URL") + "/reference-data/locations"
-            headers = {
-                "Authorization": f"Bearer {os.environ.get("AMADEUS_ACCESS_TOKEN")}"
-            }
-            params = {
-                "subType": ["CITY"],
-                "keyword": destination
-            }
-            response = session.get(url, params=params, headers=headers)
-            return response
-
-
-        response = get_city()
+        if current_user.is_anonymous:
+            flash("Please login or signup before searching")
+            return redirect(url_for("login"))
+        #validate start and end dates
+        start_date = request.form.get("start_date")
+        end_date = request.form.get("end_date")
         
-        #check if token is expired
-        if response.status_code != 200:
-            print("poo")
-            get_token()
+        format = "%Y-%m-%d"
+        start_date = datetime.strptime(start_date, format)
+        end_date = datetime.strptime(end_date, format)
 
-        response = get_city()
-        response = response.json()
-
-        if response["meta"]["count"] < 1:
-            flash("City does not exist")
+        if end_date <= start_date:
+            flash("End date cannot be before start date")
             return redirect(url_for("home"))
         
-        return redirect(url_for("home"))
-    return render_template("search.html")
+        #validates the city inputted by the user, while gathering its location
+        arrival = request.form.get("arrival")
+        destination = request.form.get("destination")
+
+        destination_city = get_city(destination=destination)
+        destination_city = destination_city.json()
+
+        if len(destination_city) < 1:
+            flash("Destination city does not exist")
+            return redirect(url_for("home"))
+        
+        arrival_city = get_city(destination=arrival)
+        arrival_city = arrival_city.json()
+
+        if len(arrival_city) < 1:
+            flash("Arrival city does not exist")
+            return redirect(url_for("home"))
+        
+        #find destination airports
+        destination_longitude = destination_city[0]["longitude"]
+        destination_latitude = destination_city[0]["latitude"]
+
+        destination_airports = get_airports(longitude=destination_longitude, latitude=destination_latitude)
+
+        if destination_airports.status_code != 200:
+            print("error")
+            get_token()
+            
+        destination_airports = get_airports(longitude=destination_longitude, latitude=destination_latitude)
+        destination_airports = destination_airports.json()
+
+        if len(destination_airports["data"]) < 1:
+            flash("No airports found from destination city")
+            return redirect(url_for("home"))
+
+        #arrival airports
+        arrival_longitude = arrival_city[0]["longitude"]
+        arrival_latitude = arrival_city[0]["latitude"]
+
+        arrival_airports = get_airports(longitude=arrival_longitude, latitude=arrival_latitude)
+
+        if arrival_airports.status_code != 200:
+            print("error")
+            get_token()
+        
+        arrival_airports = get_airports(longitude=arrival_longitude, latitude=arrival_latitude)
+        arrival_airports = arrival_airports.json()
+
+        if len(arrival_airports["data"]) < 1:
+            flash("No airports found from arrival city")
+            return redirect(url_for("home"))
+
+        print(arrival_airports["data"][0])
+        print(destination_airports["data"][0])
+        return render_template("search.html", arrival=arrival_airports["data"], destination=destination_airports["data"])
+    
+    return redirect(url_for("home"))
 
 if __name__ == "__main__":
     app.run(debug=True)
