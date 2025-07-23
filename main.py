@@ -7,7 +7,7 @@ from sqlalchemy import ForeignKey, String, Integer, DateTime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user
+from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user, login_required
 import requests_cache
 from datetime import datetime
 import requests
@@ -71,9 +71,9 @@ class Trip(db.Model):
     travelers: Mapped[int] = mapped_column(Integer, nullable=False)
     cabin_class: Mapped[str] = mapped_column(String(50), nullable=False)
     rooms: Mapped[int] = mapped_column(Integer, nullable=False)
-    check_in_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    check_out_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    user_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"), nullable=False)
+    check_in_date: Mapped[datetime] = mapped_column(DateTime)
+    check_out_date: Mapped[datetime] = mapped_column(DateTime)
+    user_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"))
     user = relationship("User", back_populates="trips")
 
 
@@ -248,12 +248,54 @@ def find_airport():
         if len(arrival_airports["data"]) < 1:
             flash("No airports found from arrival city")
             return redirect(url_for("home"))
+        
+        travelers = request.form.get("travelers")
 
-        print(arrival_airports["data"][0])
-        print(destination_airports["data"][0])
-        return render_template("search.html", arrival=arrival_airports["data"], destination=destination_airports["data"])
+        new_trip = Trip(start_date=start_date, end_date=end_date, travelers=travelers, cabin_class="", 
+                        rooms=0, arrival="", destination="", check_in_date=start_date, check_out_date=end_date,
+                        user=current_user)
+        db.session.add(new_trip)
+        db.session.commit()
+        trip_id = new_trip.id
+        
+        return render_template("search.html", arrival=arrival_airports["data"], destination=destination_airports["data"], logged_in=current_user.is_authenticated, trip_id=trip_id)
+    
+    if current_user.is_anonymous:
+        flash("Please login or signup before searching")
+        return redirect(url_for("login"))
     
     return redirect(url_for("home"))
+
+@app.route("/find-tickets/<trip_id>", methods=["POST", "GET"])
+def find_tickets(trip_id):
+    if request.method == "POST":
+        arrival_airport = request.form.get("arrival")
+        destination_airport = request.form.get("destination")
+        cabin_class = request.form.get("cabin_class")
+
+        trip = db.session.execute(db.select(Trip).where(Trip.id == trip_id))
+        trip = trip.scalar()
+
+        trip.arrival = arrival_airport
+        trip.destination = destination_airport
+        trip.cabin_class = cabin_class
+
+        #fix the date bug, format the dates 
+        format = "%Y-%m-%d"
+        start_date = trip.start_date.strftime(format)
+        end_date = trip.end_date.strftime(format)
+    
+        db.session.commit()
+
+        url = f"https://api.flightapi.io/roundtrip/{os.environ.get('FLIGHT_API_KEY')}/{arrival_airport}/{destination_airport}/{start_date}/{end_date}/{trip.travelers}/0/0/{trip.cabin_class}/USD"
+        print(url)
+        tickets = session.get(url)
+        
+        print(tickets.json())
+
+        return render_template('tickets.html', logged_in=current_user.is_authenticated)
+    return render_template(url_for('tickets.html'))
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -26,15 +26,15 @@
         </div>
       </div>
     </div>
-    
-    <div class="container px-5 d-flex justify-content-center">
+</div>  
+    <div class="container px-3 d-flex justify-content-center">
       <form method="POST" action="{{ url_for('find_airport') }}" class="w-100" style="max-width: 900px;">
         <div class="row mb-3">
-          <div class="col">
+          <div class="col-2">
             <label for="destination">Arrival City</label>
             <input type="text" name="arrival" class="form-control" id="arrival" placeholder="e.g. Atlanta" required>
           </div>
-          <div class="col">
+          <div class="col-2">
             <label for="destination">Destination City</label>
             <input type="text" name="destination" class="form-control" id="destination" placeholder="e.g., Paris" required>
           </div>
@@ -50,8 +50,8 @@
             <label for="travelers">Travelers</label>
             <input type="number" name="travelers" class="form-control" id="travelers" min="1" placeholder="1" required>
           </div>
-          <div class="col-2">
-            <button type="submit" class="btn btn-primary mt-2">Plan Trip</button>
+          <div class="col">
+            <button type="submit" class="btn btn-primary mt-4">Plan Trip</button>
           </div>
         </div>
       </form>
@@ -69,5 +69,5 @@
     </div>
     
   {% endblock %}
-</div>
+
 {% endblock %}
