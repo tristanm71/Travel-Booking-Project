@@ -1,0 +1,42 @@
+.choice {
+    border: 1px solid #333;
+    border-radius: 6px;
+    margin: auto;
+}
+
+.time {
+    font-weight: 500;   
+    font-size: 1.1rem;
+}
+
+.duration {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.price {
+    font-weight: 500;
+    font-size: 1.4rem;
+    color: darkslategray;
+}
+
+.small {
+    font-size: .7rem;
+}
+
+.tiny{
+    font-size: .6rem;
+}
+
+.right {
+    text-align: right;
+}
+
+.medium {
+    font-size: 1rem;
+}
+
+.submit-button {
+    display: flex;
+    justify-content: center;
+}

@@ -1,4 +1,161 @@
 {% extends 'base.html' %}
 {% block content %}
-<p>erer</p>
+<div class="px-4 pt-3 pb-3 my-3 text-center">
+    <h1 class="fw-bold text-body-emphasis">
+       Pick a Flight Itinerary
+    </h1>
+</div>
+<div class="container justify-content-center">
+    {% for itinerary in itinerary_list %}
+    
+    <!-- Ticket Choice Box -->
+    <div class="choice mb-4" style="width:60%; padding: 0.2rem 0.5rem;">
+        <!-- To Destination -->
+        <div class="row align-items-center mb-0 mt-1">
+            <div class="col-4 tiny">
+                <p class="mb-0"><span>To Destination</span></p>
+            </div>
+            <div class="col-4 tiny">
+                <span></span>
+            </div>
+            <div class="col-4 tiny right">
+                <span></span>
+            </div>
+        </div>
+    
+        <div class="row justify-content-center align-items-center mb-0">
+            <div class="col-4 time">
+                <span>
+                      <p class="mb-0">{{itinerary["leg1_departure"] | format_time}} &rarr; {{itinerary["leg1_arrival"] | format_time}}</p>
+                </span>
+            </div>
+            <div class="col-4 duration">
+                <span>
+                    <p class="mb-0">{{ itinerary["leg1_duration"] // 60}}hr {{ itinerary["leg1_duration"] % 60}}min &#x2022 
+                        {% if itinerary["leg1_stop_count"] > 1 %}
+                            {{itinerary["leg1_stop_count"]}} Stops
+                        {% elif itinerary['leg1_stop_count'] == 1 %}
+                            {{itinerary["leg1_stop_count"]}} Stop
+                        {% else %}
+                            Direct Flight
+                        {% endif %}
+                    </p>
+                </span>
+            </div>
+            <div class="col-4 price right">
+                <span>${{ "%.02f" | format(itinerary["price"]) }}</span>
+            </div>
+        </div>
+        <div class="row align-items-center mb-0">
+            <div class="col-4 medium">
+                <span>{{itinerary["leg1_departure"] | format_date}} - {{itinerary["leg1_arrival"] | format_date}}</span>
+            </div>
+            <div class="col-4 small">
+                <span>{%- for layover in itinerary["leg1_layover_list"] -%}
+                      {{ layover}}
+                      {%- endfor -%}
+                </span>
+            </div>
+            <div class="col-4 small right">
+                <span>Roundtrip per traveler</span>
+            </div>
+        </div>
+        <div class="row align-items-center mb-2">
+            <div class="col-4 small">
+                <span>{{ trip.arrival }} -> {{trip.destination }}</span>
+            </div>
+            <div class="col-4 small">
+                <span>
+                </span> 
+            </div>
+            <div class="col-4 small right">
+                <span></span>
+            </div>
+        </div>
+        
+        <!-- Return Information -->
+        <div class="row align-items-center mb-0">
+            <div class="col-4 tiny">
+                <span>Return Flight</span>
+            </div>
+            <div class="col-4 tiny">
+                <span></span>
+            </div>
+            <div class="col-4 tiny right">
+                <span></span>
+            </div>
+        </div>
+        <div class="row justify-content-center align-items-center mb-0">
+            <div class="col-4 time">
+                <span>
+                      <p class="mb-0">{{itinerary["leg2_departure"] | format_time}} &rarr; {{ itinerary["leg2_arrival"] | format_time}}</p>
+                </span>
+            </div>
+            <div class="col-4 duration">
+                <span>
+                    <p class="mb-0">{{itinerary["leg2_duration"] // 60}}hr {{itinerary["leg2_duration"] % 60}}min &#x2022 
+                        {% if itinerary["leg2_stop_count"] > 1 %}
+                            {{itinerary["leg2_stop_count"]}} Stops
+                        {% elif itinerary['leg2_stop_count'] == 1 %}
+                            {{itinerary["leg2_stop_count"]}} Stop
+                        {% else %}
+                            Direct Flight
+                        {% endif %}
+                    </p>
+                </span>
+            </div>
+            <div class="col-4 price right">
+                <span></span>
+            </div>
+        </div>
+        <div class="row align-items-center mb-0">
+            <div class="col-4 medium">
+                <span>{{itinerary["leg2_departure"] | format_date}} - {{itinerary["leg2_arrival"] | format_date}}</span>
+            </div>
+            <div class="col-4 small">
+                <span>{%- for layover in itinerary["leg2_layover_list"] -%}
+                      {{ layover}}
+                      {%- endfor -%}</span>
+            </div>
+            <div class="col-4 small right">
+                <span></span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 small">
+                <span>{{ trip.destination }} -> {{trip.arrival }}</span>
+            </div>
+            <div class="col-4 small">
+                <span>
+                </span>
+            </div>
+            <div class="col-4 small right">
+                <span></span>
+            </div>
+        </div>
+
+        <div class="row mt-1 mb-1">
+            <div class="col-4 small">
+                <span>Operated by {{ itinerary["agent"] }}
+                                </span>
+            </div>
+            <div class="col-4 small"></div>
+            <div class="col-4 small right">
+                <a target="_blank" href="{{ itinerary['url'] }}">More Details</a>
+            </div>
+        </div>
+        <hr style="width: 100%; margin: 1px;; padding: 1px;">
+        <div class="row d-flex justify-content-center">
+            <div class="col-4 small"></div>
+            <div class="col-4 small submit-button">
+                <button type="submit" class="btn btn-primary">Select</button>
+            </div>
+            <div class="col-4 small">
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+
 {% endblock %}

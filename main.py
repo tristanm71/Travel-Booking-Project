@@ -12,9 +12,11 @@ import requests_cache
 from datetime import datetime
 import requests
 
-load_dotenv()
+base_url = 'https://www.skyscanner.com' #for itinerary link
 
-session = requests_cache.CachedSession('api_cache')
+load_dotenv() #load in env file
+
+session = requests_cache.CachedSession('api_cache') #to use a cache for api requests
 
 #gathers API token for Amadeus and saves it on the env file
 def get_token():
@@ -35,7 +37,6 @@ def get_token():
     table = response.json()
     token = table["access_token"]
     os.environ["AMADEUS_ACCESS_TOKEN"] = token
-
 
 #set up flask app
 app = Flask(__name__)
@@ -88,6 +89,29 @@ login_manager.init_app(app)
 def load_user(user_id):
     return db.get_or_404(User, user_id)
 
+#format time for itinerary
+@app.template_filter("format_time")
+def format_time(value):
+    if isinstance(value, str):
+        dt = datetime.fromisoformat(value)
+    elif isinstance(value, datetime):
+        dt = value
+    else:
+        return ""
+    return dt.strftime("%I:%M %p")
+
+#format date
+@app.template_filter("format_date")
+def format_date(value):
+    if isinstance(value, str):
+        dt = datetime.fromisoformat(value)
+    elif isinstance(value, datetime):
+        dt = value
+    else:
+        return ""
+    return dt.strftime("%m/%d/%Y")
+
+#home page
 @app.route("/")
 def home():
     today = datetime.now
@@ -153,7 +177,7 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
-
+#use api to get the iata code of the city
 def get_city(destination):
     url = "https://api.api-ninjas.com/v1/city"
     headers = {
@@ -165,6 +189,7 @@ def get_city(destination):
     response = session.get(url, params=params, headers=headers)
     return response
 
+#use iata code to search for airports
 def get_airports(longitude, latitude):
     url = os.environ.get("AMADEUS_BASE_URL") + "/reference-data/locations/airports"
     headers = {
@@ -182,6 +207,7 @@ def get_airports(longitude, latitude):
 @app.route("/find-airport", methods=["GET", "POST"])
 def find_airport():
     if request.method == "POST":
+        #check if the user is not logged in
         if current_user.is_anonymous:
             flash("Please login or signup before searching")
             return redirect(url_for("login"))
@@ -201,13 +227,14 @@ def find_airport():
         arrival = request.form.get("arrival")
         destination = request.form.get("destination")
 
+        #use fuction api to get the actual city
         destination_city = get_city(destination=destination)
         destination_city = destination_city.json()
 
         if len(destination_city) < 1:
             flash("Destination city does not exist")
             return redirect(url_for("home"))
-        
+        #get city
         arrival_city = get_city(destination=arrival)
         arrival_city = arrival_city.json()
 
@@ -218,7 +245,8 @@ def find_airport():
         #find destination airports
         destination_longitude = destination_city[0]["longitude"]
         destination_latitude = destination_city[0]["latitude"]
-
+        
+        #fetch airports and check if airport exists
         destination_airports = get_airports(longitude=destination_longitude, latitude=destination_latitude)
 
         if destination_airports.status_code != 200:
@@ -250,13 +278,13 @@ def find_airport():
             return redirect(url_for("home"))
         
         travelers = request.form.get("travelers")
-
+        #create new trip object
         new_trip = Trip(start_date=start_date, end_date=end_date, travelers=travelers, cabin_class="", 
                         rooms=0, arrival="", destination="", check_in_date=start_date, check_out_date=end_date,
                         user=current_user)
         db.session.add(new_trip)
         db.session.commit()
-        trip_id = new_trip.id
+        trip_id = new_trip.id #pass the id to the next page
         
         return render_template("search.html", arrival=arrival_airports["data"], destination=destination_airports["data"], logged_in=current_user.is_authenticated, trip_id=trip_id)
     
@@ -269,13 +297,15 @@ def find_airport():
 @app.route("/find-tickets/<trip_id>", methods=["POST", "GET"])
 def find_tickets(trip_id):
     if request.method == "POST":
+        #get form variables
         arrival_airport = request.form.get("arrival")
         destination_airport = request.form.get("destination")
         cabin_class = request.form.get("cabin_class")
 
+        #find trip in the database 
         trip = db.session.execute(db.select(Trip).where(Trip.id == trip_id))
         trip = trip.scalar()
-
+        #update values
         trip.arrival = arrival_airport
         trip.destination = destination_airport
         trip.cabin_class = cabin_class
@@ -286,14 +316,148 @@ def find_tickets(trip_id):
         end_date = trip.end_date.strftime(format)
     
         db.session.commit()
-
+        #url to search for flight prices
         url = f"https://api.flightapi.io/roundtrip/{os.environ.get('FLIGHT_API_KEY')}/{arrival_airport}/{destination_airport}/{start_date}/{end_date}/{trip.travelers}/0/0/{trip.cabin_class}/USD"
-        print(url)
+        # print(url)
         tickets = session.get(url)
-        
-        print(tickets.json())
+        #check if there is flights
+        options = tickets.json()
+        try:
+            itineraries = options["itineraries"]
+        except:
+            flash("API key error")
+            print(options)
+            return redirect(url_for("home"))
 
-        return render_template('tickets.html', logged_in=current_user.is_authenticated)
+        if len(options) < 1:
+            flash("No flights found")
+            return redirect(url_for("home"))
+        
+        # print(options)
+        
+        #format prep to display
+        itinerary_list = []
+        leg_id_list = {}
+        agent_id_list = {}
+        segment_id_list = {}
+        place_id_list = {}
+
+        for leg in options["legs"]:
+            leg_id_list[leg["id"]] = leg
+
+        for agent in options["agents"]:
+            agent_id_list[agent["id"]] = agent
+
+        for segment in options["segments"]:
+            segment_id_list[segment["id"]] = segment
+
+        for place in options["places"]:
+            place_id_list[place["id"]] = place
+
+        for option in options["itineraries"]:
+            itinerary = {
+                "leg1_departure": "",
+                "leg1_arrival": "",
+                "leg1_duration": 0,
+                "leg1_stop_count": 0,
+                "leg1_layover_list": [],
+                "leg2_departure": "",
+                "leg2_arrival": "",
+                "leg2_duration": 0,
+                "leg2_stop_count": 0,
+                "leg2_layover_list": [],
+                "price": 0.0,
+                "agent": "",
+                "url": "https://www.skyscanner.com"
+            }
+
+            itinerary["url"] = itinerary["url"] + option["pricing_options"][0]["items"][0]["url"]
+
+            if leg_id_list[option["leg_ids"][0]]:
+                leg = leg_id_list[option["leg_ids"][0]]
+                itinerary["leg1_departure"] = leg["departure"]
+                itinerary["leg1_arrival"] = leg["arrival"]
+                itinerary["leg1_duration"] = int(leg["duration"])
+                itinerary["leg1_stop_count"] = leg["stop_count"]
+                
+                if len(leg["segment_ids"]) > 1:
+                    layovers = []
+                    layover_duration = 0
+                    for i in range(0, len(leg["segment_ids"]) - 1):
+                        if segment_id_list[leg["segment_ids"][i]]:
+                            segment1 = segment_id_list[leg["segment_ids"][i]]
+                            segment2 = segment_id_list[leg["segment_ids"][i + 1]]
+                            segment1_arrival = datetime.fromisoformat(segment1["arrival"])
+                            segment2_departure = datetime.fromisoformat(segment2["departure"])
+                            difference = segment2_departure - segment1_arrival
+                            difference = difference.total_seconds()
+                            hours = int(difference // 3600)
+                            mins = int((difference % 3600) / 60)
+                            layover_place = place_id_list[segment1["destination_place_id"]]["display_code"]
+                            formatted_layover = f"{hours}h {mins}m layover at {layover_place}"
+                            if len(layovers) > 0:
+                                formatted_layover = ", " + formatted_layover
+                            layovers.append(formatted_layover)
+                            layover_duration += (difference / 60)
+                        else:
+                            flash("Server error")
+                            return redirect(url_for("home"))
+                    
+                    itinerary['leg1_duration'] -= int(layover_duration) 
+                    itinerary["leg1_layover_list"] = layovers
+            else:
+                flash("Server error")
+                return redirect(url_for("home"))
+
+
+            if leg_id_list[option["leg_ids"][1]]:
+                leg = leg_id_list[option["leg_ids"][1]]
+                itinerary["leg2_departure"] = leg["departure"]
+                itinerary["leg2_arrival"] = leg["arrival"]
+                itinerary["leg2_duration"] = leg["duration"]
+                itinerary["leg2_stop_count"] = leg["stop_count"]
+
+                if len(leg["segment_ids"]) > 1:
+                    layovers = []
+                    layover_duration = 0
+                    for i in range(0, len(leg["segment_ids"]) - 1):
+                        if segment_id_list[leg["segment_ids"][i]]:
+                            segment1 = segment_id_list[leg["segment_ids"][i]]
+                            segment2 = segment_id_list[leg["segment_ids"][i + 1]]
+                            segment1_arrival = datetime.fromisoformat(segment1["arrival"])
+                            segment2_departure = datetime.fromisoformat(segment2["departure"])
+                            difference = segment2_departure - segment1_arrival
+                            difference = difference.total_seconds()
+                            hours = int(difference // 3600)
+                            mins = int((difference % 3600) / 60)
+                            layover_place = place_id_list[segment1["destination_place_id"]]["display_code"]
+                            formatted_layover = f"{hours}h {mins}m layover at {layover_place}"
+                            if len(layovers) > 0:
+                                formatted_layover = ", " + formatted_layover
+                            layovers.append(formatted_layover)
+                            layover_duration += (difference / 60)
+                        else:
+                            flash("Server error")
+                            return redirect(url_for("home"))
+
+                    itinerary['leg2_duration'] -= int(layover_duration)                        
+                    itinerary["leg2_layover_list"] = layovers
+            else:
+                flash("Server error")
+                return redirect(url_for("home"))
+
+            itinerary["price"] = option["cheapest_price"]["amount"] / trip.travelers
+            
+            if agent_id_list[option["pricing_options"][0]["agent_ids"][0]]:
+                agent = agent_id_list[option["pricing_options"][0]["agent_ids"][0]]
+                itinerary["agent"] = agent["name"]
+            else:
+                print("error")
+
+            
+            itinerary_list.append(itinerary)
+
+        return render_template('tickets.html', logged_in=current_user.is_authenticated, trip=trip, url=base_url, itinerary_list=itinerary_list)
     return render_template(url_for('tickets.html'))
 
 
