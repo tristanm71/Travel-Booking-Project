@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-5 mb-5 px-5 d-flex justify-content-center">
-    <form method="POST" action="{{ url_for('find_tickets', trip_id=trip_id) }}" class="w-100" style="max-width: 900px;">
+    <form method="POST" action="{{ url_for('find_tickets')}}" class="w-100" style="max-width: 900px;">
+        <input type="hidden" name="id" value="{{trip_id}}">
         <div class="row mb-3">
             <div class="col-4">
-                <select class="form-select" name="arrival" aria-label="Select Arrival Airport">
+                <select class="form-select" name="arrival" aria-label="Select Arrival Airport" required>
                     <option selected disabled>Select Arrival Airport</option>
                     {% for airport in arrival %}
                     <option value="{{airport['iataCode']}}">
@@ -16,7 +17,7 @@
                 </select>
             </div>
             <div class="col-4">
-                <select class="form-select" name="destination" aria-label="Select Destination Airport">
+                <select class="form-select" name="destination" aria-label="Select Destination Airport" required>
                     <option selected disabled>Select Destination Airport</option>
                     {% for airport in destination %}
                     <option value="{{airport['iataCode']}}">
@@ -28,7 +29,7 @@
                 </select>
             </div>
             <div class="col-4">
-                <select class="form-select" name="cabin_class" aria-label="Select Cabin Class">
+                <select class="form-select" name="cabin_class" aria-label="Select Cabin Class" required>
                     <option selected disabled>Select Cabin Class</option>
                     <option value="Economy">Economy</option>
                     <option value="First">First Class</option>

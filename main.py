@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os 
 from flask_bootstrap import Bootstrap5
 from datetime import datetime
-from sqlalchemy import ForeignKey, String, Integer, DateTime
+from sqlalchemy import ForeignKey, String, Integer, DateTime, JSON, Float
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,6 +11,7 @@ from flask_login import LoginManager, login_user, logout_user, UserMixin, curren
 import requests_cache
 from datetime import datetime
 import requests
+import json
 
 base_url = 'https://www.skyscanner.com' #for itinerary link
 
@@ -67,13 +68,23 @@ class Trip(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     arrival: Mapped[str] = mapped_column(String(100), nullable=False)
     destination: Mapped[str] = mapped_column(String(100), nullable=False)
+    arrival_lon: Mapped[float] = mapped_column(Float, nullable=False)
+    arrival_lat: Mapped[float] = mapped_column(Float, nullable=False)
+    destination_lon: Mapped[float] = mapped_column(Float, nullable=False)
+    destination_lat: Mapped[float] = mapped_column(Float, nullable=False)
     start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     travelers: Mapped[int] = mapped_column(Integer, nullable=False)
     cabin_class: Mapped[str] = mapped_column(String(50), nullable=False)
     rooms: Mapped[int] = mapped_column(Integer, nullable=False)
-    check_in_date: Mapped[datetime] = mapped_column(DateTime)
-    check_out_date: Mapped[datetime] = mapped_column(DateTime)
+    check_in_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    check_out_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    leg_id_list = mapped_column(JSON)
+    agent_id_list = mapped_column(JSON)
+    segment_id_list = mapped_column(JSON)
+    place_id_list = mapped_column(JSON)
+    itinerary_id_list = mapped_column(JSON)
+    itinerary_id: Mapped[str] = mapped_column(String)
     user_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"))
     user = relationship("User", back_populates="trips")
 
@@ -124,18 +135,20 @@ def register():
         email = request.form.get("email")
         password = request.form.get("password")
         username = request.form.get("username")
+        #get the user in the data base to check if there is already a user
         user = db.session.execute(db.select(User).where(User.email == email))
         user = user.scalar()
         if user:
             flash("Email is already in use")
             return redirect(url_for("register"))
-        
+        #check username
         user = db.session.execute(db.select(User).where(User.username == username))
         user = user.scalar()
         if user:
             flash("Username is already in use")
             return redirect(url_for("register"))
         
+        #once validated, make new user object and put in database
         new_user = User(email=email,
                         password=generate_password_hash(password, method="pbkdf2:sha256", salt_length=8),
                         username=username)
@@ -153,6 +166,7 @@ def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+        #validate user login
         user = db.session.execute(db.select(User).where(User.username == username))
         user = user.scalar()
         if not user:
@@ -165,7 +179,7 @@ def login():
         if not check_password_hash(user.password, password):
             flash("Wrong password")
             return redirect(url_for('login'))
-        
+        #for user auth
         login_user(user)
         return redirect(url_for('home'))
     
@@ -253,8 +267,10 @@ def find_airport():
             print("error")
             get_token()
             
-        destination_airports = get_airports(longitude=destination_longitude, latitude=destination_latitude)
-        destination_airports = destination_airports.json()
+            destination_airports = get_airports(longitude=destination_longitude, latitude=destination_latitude)
+            destination_airports = destination_airports.json()
+        else: 
+            destination_airports = destination_airports.json()
 
         if len(destination_airports["data"]) < 1:
             flash("No airports found from destination city")
@@ -270,8 +286,10 @@ def find_airport():
             print("error")
             get_token()
         
-        arrival_airports = get_airports(longitude=arrival_longitude, latitude=arrival_latitude)
-        arrival_airports = arrival_airports.json()
+            arrival_airports = get_airports(longitude=arrival_longitude, latitude=arrival_latitude)
+            arrival_airports = arrival_airports.json()
+        else:
+            arrival_airports = arrival_airports.json()
 
         if len(arrival_airports["data"]) < 1:
             flash("No airports found from arrival city")
@@ -280,8 +298,9 @@ def find_airport():
         travelers = request.form.get("travelers")
         #create new trip object
         new_trip = Trip(start_date=start_date, end_date=end_date, travelers=travelers, cabin_class="", 
-                        rooms=0, arrival="", destination="", check_in_date=start_date, check_out_date=end_date,
-                        user=current_user)
+                        rooms=0, arrival="", destination="", user=current_user, arrival_lat=arrival_latitude, 
+                        arrival_lon=arrival_longitude,destination_lon=destination_longitude, 
+                        destination_lat=destination_latitude, itinerary_id="")
         db.session.add(new_trip)
         db.session.commit()
         trip_id = new_trip.id #pass the id to the next page
@@ -294,13 +313,14 @@ def find_airport():
     
     return redirect(url_for("home"))
 
-@app.route("/find-tickets/<trip_id>", methods=["POST", "GET"])
-def find_tickets(trip_id):
+@app.route("/find-tickets", methods=["POST", "GET"])
+def find_tickets():
     if request.method == "POST":
         #get form variables
         arrival_airport = request.form.get("arrival")
         destination_airport = request.form.get("destination")
         cabin_class = request.form.get("cabin_class")
+        trip_id = request.form.get('id')
 
         #find trip in the database 
         trip = db.session.execute(db.select(Trip).where(Trip.id == trip_id))
@@ -320,7 +340,7 @@ def find_tickets(trip_id):
         url = f"https://api.flightapi.io/roundtrip/{os.environ.get('FLIGHT_API_KEY')}/{arrival_airport}/{destination_airport}/{start_date}/{end_date}/{trip.travelers}/0/0/{trip.cabin_class}/USD"
         # print(url)
         tickets = session.get(url)
-        #check if there is flights
+        #check if there is flights, else send user back to home page
         options = tickets.json()
         try:
             itineraries = options["itineraries"]
@@ -333,6 +353,9 @@ def find_tickets(trip_id):
             flash("No flights found")
             return redirect(url_for("home"))
         
+        # filename = 'tickets.json'
+        # with open(filename, "w") as json_file:
+        #     json.dump(options, json_file, indent=4)
         # print(options)
         
         #format prep to display
@@ -341,7 +364,9 @@ def find_tickets(trip_id):
         agent_id_list = {}
         segment_id_list = {}
         place_id_list = {}
+        itinerary_id_list = {}
 
+        #make hash tables for different sections that need to be accessed to reduce time
         for leg in options["legs"]:
             leg_id_list[leg["id"]] = leg
 
@@ -354,8 +379,18 @@ def find_tickets(trip_id):
         for place in options["places"]:
             place_id_list[place["id"]] = place
 
+        trip.leg_id_list = leg_id_list
+        trip.agent_id_list = agent_id_list
+        trip.segment_id_list = segment_id_list
+        trip.place_id_list = place_id_list
+        db.session.commit()
+
+        #loop through the itinerary and format it for the html page
         for option in options["itineraries"]:
+            #the id is the key, the option json is the val
+            itinerary_id_list[option["id"]] = option
             itinerary = {
+                "id": "",
                 "leg1_departure": "",
                 "leg1_arrival": "",
                 "leg1_duration": 0,
@@ -370,9 +405,11 @@ def find_tickets(trip_id):
                 "agent": "",
                 "url": "https://www.skyscanner.com"
             }
-
+            #url and id
             itinerary["url"] = itinerary["url"] + option["pricing_options"][0]["items"][0]["url"]
+            itinerary["id"] = option["id"]
 
+            #get leg 1 data
             if leg_id_list[option["leg_ids"][0]]:
                 leg = leg_id_list[option["leg_ids"][0]]
                 itinerary["leg1_departure"] = leg["departure"]
@@ -380,9 +417,11 @@ def find_tickets(trip_id):
                 itinerary["leg1_duration"] = int(leg["duration"])
                 itinerary["leg1_stop_count"] = leg["stop_count"]
                 
+                #get all of the segment data and layover information
                 if len(leg["segment_ids"]) > 1:
                     layovers = []
                     layover_duration = 0
+                    #find the difference between a segments arrival and departure to get layover
                     for i in range(0, len(leg["segment_ids"]) - 1):
                         if segment_id_list[leg["segment_ids"][i]]:
                             segment1 = segment_id_list[leg["segment_ids"][i]]
@@ -402,14 +441,14 @@ def find_tickets(trip_id):
                         else:
                             flash("Server error")
                             return redirect(url_for("home"))
-                    
+                    #subtract the layover time from the total trip duration
                     itinerary['leg1_duration'] -= int(layover_duration) 
                     itinerary["leg1_layover_list"] = layovers
             else:
                 flash("Server error")
                 return redirect(url_for("home"))
 
-
+            #same thing for leg 2
             if leg_id_list[option["leg_ids"][1]]:
                 leg = leg_id_list[option["leg_ids"][1]]
                 itinerary["leg2_departure"] = leg["departure"]
@@ -445,21 +484,136 @@ def find_tickets(trip_id):
             else:
                 flash("Server error")
                 return redirect(url_for("home"))
-
+            #price
             itinerary["price"] = option["cheapest_price"]["amount"] / trip.travelers
             
+            #check if agent for flight is there
             if agent_id_list[option["pricing_options"][0]["agent_ids"][0]]:
                 agent = agent_id_list[option["pricing_options"][0]["agent_ids"][0]]
                 itinerary["agent"] = agent["name"]
             else:
                 print("error")
 
-            
+            #append the entire itinerary information to the list
             itinerary_list.append(itinerary)
-
+        trip.itinerary_id_list = itinerary_id_list
+        db.session.commit()
         return render_template('tickets.html', logged_in=current_user.is_authenticated, trip=trip, url=base_url, itinerary_list=itinerary_list)
     return render_template(url_for('tickets.html'))
 
+#search for hotels
+def get_hotels(longitude, latitude):
+    url = "https://api.liteapi.travel/v3.0/data/hotels"
+    headers = {
+        "X-API-Key": os.environ.get("LITEAPI_KEY"),
+        "accept": "application/json"
+    }
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "limit": 200,
+        "radius": 10000
+    }
+    response = session.get(url, params=params, headers=headers)
+    return response
+
+#get the prices for the hotels
+def get_hotel_offers(hotel_ids, check_in_date, check_out_date, occupants, iataCode):
+    url = "https://api.liteapi.travel/v3.0/hotels/rates"
+    headers = {
+        "X-API-Key": os.environ.get("LITEAPI_KEY"),
+        "accept": "application/json"
+    }
+    payload = {
+        "guestNationality": "US",
+        "checkin": check_in_date,
+        "checkout": check_out_date,
+        "currency": "USD", 
+        "timeout": 12,
+        "maxRatesPerHotel": 1,
+        "limit": 200,
+        "hotelIds": hotel_ids,
+        "occupancies": occupants,
+        "iataCode": iataCode,
+        "maxRatesPerHotel": 5,
+        "radius": 10000
+
+    }
+    response = session.post(url, json=payload, headers=headers)
+    return response
+
+#get hotel details
+def get_hotel_details(hotel_id):
+    url = "https://api.liteapi.travel/v3.0/data/hotel"
+    headers = {
+        "X-API-Key": os.environ.get("LITEAPI_KEY"),
+        "accept": "application/json"
+    }
+    params = {
+        "hotelId": hotel_id
+    }
+    response = session.get(url, params=params, headers=headers)
+    return response
+
+
+@app.route("/search_hotels", methods=["POST", "GET"])
+def search_hotels():
+    if request.method == "POST":
+        trip_id = request.form.get("trip_id")
+        itinerary_id = request.form.get("itinerary_id")
+        #find trip in the database 
+        trip = db.session.execute(db.select(Trip).where(Trip.id == trip_id))
+        trip = trip.scalar()
+        trip.itinerary_id = itinerary_id
+
+        db.session.commit() #update trip info
+
+        #search for list of hotels
+        hotels = get_hotels(longitude=trip.destination_lon, latitude=trip.destination_lat)
+        hotels = hotels.json()
+
+        hotel_id_list = {}
+        for hotel in hotels["data"]:
+            hotel_id_list[hotel["id"]] = hotel
+
+        #get checkin and checkout info and format
+        check_in_date = datetime.fromisoformat(trip.leg_id_list[trip.itinerary_id_list[trip.itinerary_id]["leg_ids"][0]]["arrival"])
+        check_out_date = datetime.fromisoformat(trip.leg_id_list[trip.itinerary_id_list[trip.itinerary_id]["leg_ids"][1]]["departure"])
+
+        trip.check_in_date = check_in_date
+        trip.check_out_date = check_out_date
+        
+        check_in_date = str(check_in_date.strftime("%Y-%m-%d"))
+        check_out_date = str(check_out_date.strftime("%Y-%m-%d"))
+        
+        db.session.commit()
+
+        #get prices for hotels
+        occupants = [{"adults": trip.travelers}]
+        prices = get_hotel_offers(hotel_ids=hotels["hotelIds"], check_in_date=check_in_date, 
+                                  check_out_date=check_out_date, occupants=occupants,
+                                  iataCode=trip.destination)
+        prices = prices.json()
+
+        prices_id_list = {}
+        for price in prices["data"]:
+            # print(price["hotelId"])
+            prices_id_list[price["hotelId"]] = price
+
+        # print(prices_list)
+        # with open("prices.json", 'w') as json_file:
+        #     json.dump(prices_list, json_file, indent=4)
+        details_id_list = {}
+        for id in prices_id_list:
+            details = get_hotel_details(id)
+            details_id_list[id] = details.json()
+
+        hotel_information_list = {}
+        # 
+        # print(hotel_id_list["lp32b3e"])
+        # print(prices_id_list["lp32b3e"])
+        # print(details_id_list["lp32b3e"])
+    return render_template("hotels.html", logged_in=current_user.is_authenticated)
 
 if __name__ == "__main__":
     app.run(debug=True)
