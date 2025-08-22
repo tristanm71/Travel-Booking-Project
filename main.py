@@ -608,12 +608,74 @@ def search_hotels():
             details = get_hotel_details(id)
             details_id_list[id] = details.json()
 
-        hotel_information_list = {}
+        hotel_information_list = []
         # 
-        # print(hotel_id_list["lp32b3e"])
-        # print(prices_id_list["lp32b3e"])
+        # print(hotel_id_list["lp32b3e"]
+        # print(len(prices_id_list["lp32b3e"]))
         # print(details_id_list["lp32b3e"])
-    return render_template("hotels.html", logged_in=current_user.is_authenticated)
+        # with open("details_id.json", 'w') as json_file:
+        #     json.dump(details_id_list["lp32b3e"], json_file, indent=4)
+                      
+        for id in prices_id_list:
+            hotel = {
+                "id": "",
+                "hotel_name": "",
+                "hotel_city": "",
+                "hotel_description": "",
+                "rating": 0.0,
+                "price": 0.0,
+                "photo1": "",
+                "photo2": "",
+                "photo3": "",
+                "hotel_amenities": "",
+                "check_in": "",
+                "check_out": "",
+                "photo_list": [],
+                "address": "",
+                "policies": [],
+                "reviews": 0
+            }
+
+            hotel["id"] = id
+            hotel["hotel_name"] = hotel_id_list[id]["name"]
+            hotel["hotel_description"] = hotel_id_list[id]["hotelDescription"]
+            hotel["hotel_city"] = hotel_id_list[id]["city"]
+            hotel["address"] = hotel_id_list[id]["address"]
+            hotel["check_in"] = details_id_list[id]["data"]["checkinCheckoutTimes"]["checkin"]
+            hotel["check_out"] = details_id_list[id]["data"]["checkinCheckoutTimes"]["checkout"]
+            hotel["reviews"] = hotel_id_list[id]["reviewCount"]
+
+            if hotel_id_list[id]["rating"] != 0:
+                hotel["rating"] = hotel_id_list[id]["rating"]
+            elif hotel_id_list[id]["stars"] != 0:
+                hotel["rating"] = hotel_id_list[id]["stars"] * 2
+            else:
+                hotel["rating"] = 0
+
+            hotel["price"] = prices_id_list[id]["roomTypes"][0]["rates"][0]["retailRate"]["suggestedSellingPrice"][0]["amount"]
+            hotel["photo1"] = hotel_id_list[id]["main_photo"]
+
+            try:
+                hotel["hotel_amenities"] = details_id_list[id]["data"]["hotelFacilities"]
+            except KeyError:
+                print("key error")
+
+            try:
+                hotel["photo2"] = details_id_list[id]["data"]["hotelImages"][1]["url"]
+                hotel["photo3"] = details_id_list[id]["data"]["hotelImages"][2]["url"]
+
+                for photo in details_id_list[id]["data"]["hotelImages"]:
+                    hotel["photo_list"].append(photo["url"])
+
+                for policy in details_id_list[id]["data"]["policies"]:
+                    hotel["policies"].append(policy["description"])
+            except KeyError:
+                print("key error")
+
+            hotel_information_list.append(hotel)
+
+            
+    return render_template("hotels.html", logged_in=current_user.is_authenticated, hotel_information_list=hotel_information_list)
 
 if __name__ == "__main__":
     app.run(debug=True)

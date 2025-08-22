@@ -32,6 +32,10 @@
     text-align: right;
 }
 
+.left {
+    text-align: left;
+}
+
 .medium {
     font-size: 1rem;
 }
@@ -39,4 +43,45 @@
 .submit-button {
     display: flex;
     justify-content: center;
+}
+
+.hotel-col {
+    height: 200px;
+}
+
+.main-img {
+    height: 142px;
+    border-top-left-radius: 6px;
+}
+
+.main-img figure {
+    width: 100%;
+    height: auto;
+}
+
+.secondary-imgs {
+    height: 58px;
+}
+
+.secondary-imgs figure {
+    width: 100%;
+    height: auto;
+}
+
+.secondary-one, .secondary-two {
+    margin: 0;
+    padding: 0;
+}
+
+.hotel {
+    height: 66.6px
+}
+
+.box:any-link {
+    color: black;
+    text-decoration: none;
+}
+
+.box:hover .hotel-name {
+    text-decoration: underline;
 }

@@ -1,5 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
+<div class="px-4 pt-3 pb-3 my-3 text-center">
+    <h1 class="fw-bold text-body-emphasis">
+       Choose Airport
+    </h1>
+</div>
+<div class="mb-4 text-center">
+    <p class="">Plan Trip &bull; <strong>Pick Airport &bull;</strong> Choose Itinerary &bull; Choose Stay &bull; Book Hotel &bull; Book Flight</p>
+</div>
 <div class="container mt-5 mb-5 px-5 d-flex justify-content-center">
     <form method="POST" action="{{ url_for('find_tickets')}}" class="w-100" style="max-width: 900px;">
         <input type="hidden" name="id" value="{{trip_id}}">

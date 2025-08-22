@@ -1,4 +1,134 @@
 {% extends 'base.html' %}
 {% block content %}
+<div class="px-4 pt-3 pb-3 my-3 text-center">
+    <h1 class="fw-bold text-body-emphasis">
+       Pick your Hotel
+    </h1>
+</div>
+<div class="mb-4 text-center">
+    <p class="">Plan Trip &bull; Pick Airport &bull; Choose Itinerary &bull; <strong>Choose Stay &bull;</strong> Book Hotel &bull; Book Flight</p>
+</div>
+{% for hotel in hotel_information_list %}
+<a href="https://google.com" class="box">
+<div class="container justify-content-center">
+    <div class="choice mb-4 pr-5" style="width:60%;">
+        <div class="row">
+            <div class="col-4 hotel-col">
+                <div class="container px-0">
+                    {% if hotel['photo2'] == "" %}
+                    <div class="row main-img justify-content-center">
+                        <figure>
+                            <img src="{{hotel['photo1']}}" alt="Main Hotel Image" height="200px" width="215px">
+                        </figure>
+                    </div>
+                    {% else %}
+                    <div class="row main-img">
+                        <figure>
+                            <img src="{{hotel['photo1']}}" alt="Main Hotel Image" height="142px" width="215px">
+                        </figure>
+                    </div>
+                    <div class="row secondary-imgs g-0">
+                        <div class="col secondary-one justify-content-end pr-0">
+                            <figure>
+                                <img src="{{hotel['photo2']}}" alt="Picture Two" height="58px" width="94px">
+                            </figure>
+                        </div>
+                        <div class="col secondary-two justify-content-start pl-0">
+                            <figure>
+                                <img src="{{hotel['photo3']}}" alt="Picture Three" height="58px" width="94px">
+                            </figure>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-5 container">
+                <div class="row hotel medium pt-2">
+                    <p class="px-0 mb-0 time hotel-name">
+                        {{ hotel["hotel_name"] }}
+                    <p class="px-0 mb-0">
+                        {{ hotel["hotel_city"] }}
+                    </p>
+                </div>
+                <div class="row hotel align-items-end">
+                    <p class="px-0 mb-0">
+                        
+                    </p>
+                </div>
+                <div class="row hotel align-items-end">
+                    {% if hotel["rating"] == 0 %}
+                        <p class="px-0 mb-3 time">
+                            Rating N/A
+                        </p>
+                    {% else %}
+                        <p class="px-0 mb-3 time">
+                            {{ hotel["rating"] }}/ 10
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="row hotel medium"></div>
+                <div class="row hotel right small px-2 justify-content-center align-items-center">
+                    <!-- Button trigger modal -->
+                    <button type="button" class="btn btn-primary" style="width: 60%; height: 50%;" data-bs-toggle="modal" data-bs-target="#hotelModal{{ loop.index }}">
+                        More Info
+                    </button>
 
+                    <!-- Modal -->
+                    <div class="modal fade" id="hotelModal{{ loop.index }}" tabindex="-1" aria-labelledby="hotelModalLabel{{ loop.index }}" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="hotelModalLabel{{ loop.index }}">{{ hotel["hotel_name"] }}</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body left">
+                                    {{ hotel["hotel_description"] | safe}}
+                                    <p><strong>Hotel Policies</strong></p>
+                                    <p>Check In Time: {{ hotel["check_in"] }}</p>
+                                    <p>Check Out Time: {{ hotel["check_out"] }}</p>
+                                    <ul>
+                                        {% for policy in hotel["policies"] %}
+                                            <li> {{ policy }} </li>
+                                            {% endfor %}
+                                    </ul>
+                                    <p><strong>Address</strong></p>
+                                    <p>{{ hotel["address"] }}</p>
+                                    <p><strong>Hotel Amenities</strong></p>
+                                    <ul>
+                                        {% for amenity in hotel["hotel_amenities"] %}
+                                            <li> {{ amenity }} </li>
+                                            {% endfor %}
+                                    </ul>
+                                    <p><strong>Ratings</strong></p>
+                                    <p>{{ hotel["rating"] }}/10</p>
+                                    <p>Reviews: {{ hotel["reviews"] }}</p>
+                                    <p><strong>Hotel Images</strong></p>
+                                    {% for photo in hotel["photo_list"] %}
+                                    <div style="justify-content: center;">
+                                        <figure>
+                                            <img src="{{ photo }}" alt="Hotel Image" height="auto" width="465px">
+                                        </figure>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row hotel align-items-end right">
+                    <p class="px-4 price">
+                        <span style="white-space: nowrap;"> ${{ "%.02f" | format(hotel["price"]) }}<span class="tiny"> total</span></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</a>
+{% endfor %}
 {% endblock %}
