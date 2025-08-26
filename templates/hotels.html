@@ -6,12 +6,13 @@
     </h1>
 </div>
 <div class="mb-4 text-center">
-    <p class="">Plan Trip &bull; Pick Airport &bull; Choose Itinerary &bull; <strong>Choose Stay &bull;</strong> Book Hotel &bull; Book Flight</p>
+    <p class="">Plan Trip &bull; Pick Airport &bull; Choose Itinerary &bull; <strong>Choose Stay &bull;</strong> Review Trip</p>
 </div>
 {% for hotel in hotel_information_list %}
-<a href="https://google.com" class="box">
+
 <div class="container justify-content-center">
     <div class="choice mb-4 pr-5" style="width:60%;">
+        <a href="{{ url_for('choose_room', id=hotel['id'], trip_id=trip_id) }}" class="box">
         <div class="row">
             <div class="col-4 hotel-col">
                 <div class="container px-0">
@@ -71,7 +72,7 @@
                 <div class="row hotel medium"></div>
                 <div class="row hotel right small px-2 justify-content-center align-items-center">
                     <!-- Button trigger modal -->
-                    <button type="button" class="btn btn-primary" style="width: 60%; height: 50%;" data-bs-toggle="modal" data-bs-target="#hotelModal{{ loop.index }}">
+                    <button type="button" class="btn btn-primary" style="width: 60%; height: 50%;" data-bs-toggle="modal" data-bs-target="#hotelModal{{ loop.index }}" onclick="event.preventDefault();">
                         More Info
                     </button>
 
@@ -81,7 +82,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h1 class="modal-title fs-5" id="hotelModalLabel{{ loop.index }}">{{ hotel["hotel_name"] }}</h1>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="event.preventDefault();"></button>
                                 </div>
                                 <div class="modal-body left">
                                     {{ hotel["hotel_description"] | safe}}
@@ -114,7 +115,7 @@
                                     {% endfor %}
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="event.preventDefault();">Close</button>
                                 </div>
                             </div>
                         </div>
@@ -127,8 +128,9 @@
                 </div>
             </div>
         </div>
+        </a>
     </div>
 </div>
-</a>
+
 {% endfor %}
 {% endblock %}

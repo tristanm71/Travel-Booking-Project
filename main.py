@@ -87,7 +87,9 @@ class Trip(db.Model):
     itinerary_id: Mapped[str] = mapped_column(String)
     user_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"))
     user = relationship("User", back_populates="trips")
-
+    details_id_list = mapped_column(JSON)
+    prices_id_list = mapped_column(JSON)
+    hotel_id_list = mapped_column(JSON)
 
 with app.app_context():
     db.create_all()
@@ -608,6 +610,10 @@ def search_hotels():
             details = get_hotel_details(id)
             details_id_list[id] = details.json()
 
+        trip.details_id_list = details_id_list
+        trip.hotel_id_list = hotel_id_list
+        trip.prices_id_list = prices_id_list
+        db.session.commit()
         hotel_information_list = []
         # 
         # print(hotel_id_list["lp32b3e"]
@@ -641,8 +647,13 @@ def search_hotels():
             hotel["hotel_description"] = hotel_id_list[id]["hotelDescription"]
             hotel["hotel_city"] = hotel_id_list[id]["city"]
             hotel["address"] = hotel_id_list[id]["address"]
-            hotel["check_in"] = details_id_list[id]["data"]["checkinCheckoutTimes"]["checkin"]
-            hotel["check_out"] = details_id_list[id]["data"]["checkinCheckoutTimes"]["checkout"]
+            try:
+                hotel["check_in"] = details_id_list[id]["data"]["checkinCheckoutTimes"]["checkin"]
+                hotel["check_out"] = details_id_list[id]["data"]["checkinCheckoutTimes"]["checkout"]
+            except KeyError:
+                hotel["check_in"] = "N/A"
+                hotel["check_out"] = "N/A"
+
             hotel["reviews"] = hotel_id_list[id]["reviewCount"]
 
             if hotel_id_list[id]["rating"] != 0:
@@ -675,7 +686,52 @@ def search_hotels():
             hotel_information_list.append(hotel)
 
             
-    return render_template("hotels.html", logged_in=current_user.is_authenticated, hotel_information_list=hotel_information_list)
+    return render_template("hotels.html", logged_in=current_user.is_authenticated, hotel_information_list=hotel_information_list, trip_id=trip_id)
+
+
+@app.route("/choose_room/<trip_id>/<id>", methods=["GET"])
+def choose_room(id, trip_id):
+    hotel_id = id
+    
+    #find trip in the database 
+    trip = db.session.execute(db.select(Trip).where(Trip.id == trip_id))
+    trip = trip.scalar()
+
+    rooms = trip.details_id_list[hotel_id]["data"]["rooms"]
+    room_list = []
+
+    for room in rooms:
+        new_room = {
+            "id": "",
+            "name": "",
+            "description": "",
+            "amenities": [],
+            "photos": [],
+            "beds": []
+        }
+        new_room["id"] = room["id"]
+        new_room["name"] = room["roomName"]
+        new_room["description"] = room["description"]
+
+        for amenity in room["roomAmenities"]:
+            new_room["amenities"].append(amenity["name"])
+
+        for photo in room["photos"]:
+            new_room["photos"].append(photo["url"])
+
+        for bed in room["bedTypes"]:
+            
+            new_bed = {
+                "quantity": "",
+                "type": ""
+            }
+            new_bed["quantity"] = bed["quantity"]
+            new_bed["type"] = bed["bedType"]
+            new_room["beds"].append(new_bed)
+    
+        room_list.append(new_room)    
+
+    return render_template("room.html", logged_in=current_user.is_authenticated, room_list=room_list)
 
 if __name__ == "__main__":
     app.run(debug=True)
