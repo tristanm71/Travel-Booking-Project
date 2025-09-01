@@ -698,7 +698,32 @@ def choose_room(id, trip_id):
     trip = trip.scalar()
 
     rooms = trip.details_id_list[hotel_id]["data"]["rooms"]
+    prices = trip.prices_id_list[hotel_id]["roomTypes"]
     room_list = []
+    hotel_information = {
+        "photos": [],
+        "description": "",
+        "name": "",
+        "address": "",
+        "pros": [],
+        "cons": [],
+        "reviews": []
+    }
+
+    hotel_information["description"] = trip.details_id_list[hotel_id]["data"]["hotelDescription"]
+    hotel_information["name"] = trip.details_id_list[hotel_id]["data"]["name"]
+    hotel_information["address"] = trip.details_id_list[hotel_id]["data"]["address"]
+    
+    try:
+        hotel_information["pros"] = trip.details_id_list[hotel_id]["data"]["sentiment_analysis"]["pros"]
+        hotel_information["cons"] = trip.details_id_list[hotel_id]["data"]["sentiment_analysis"]["cons"]
+        for review in trip.details_id_list[hotel_id]["data"]["sentiment_analysis"]["categories"]:
+            hotel_information["reviews"].append(review)
+    except KeyError:
+        print("error")
+    
+    for photo in trip.details_id_list[hotel_id]["data"]["hotelImages"]:
+        hotel_information["photos"].append(photo["url"])
 
     for room in rooms:
         new_room = {
@@ -707,7 +732,8 @@ def choose_room(id, trip_id):
             "description": "",
             "amenities": [],
             "photos": [],
-            "beds": []
+            "beds": [],
+            "price": 0.0
         }
         new_room["id"] = room["id"]
         new_room["name"] = room["roomName"]
@@ -729,9 +755,14 @@ def choose_room(id, trip_id):
             new_bed["type"] = bed["bedType"]
             new_room["beds"].append(new_bed)
     
-        room_list.append(new_room)    
+        room_list.append(new_room)
+        print(new_room)    
 
-    return render_template("room.html", logged_in=current_user.is_authenticated, room_list=room_list)
+    return render_template("room.html", logged_in=current_user.is_authenticated, room_list=room_list, hotel_information=hotel_information)
+
+@app.route("review_trip", methods=["GET"])
+def review_trip():
+    return render_template("review.html")
 
 if __name__ == "__main__":
     app.run(debug=True)

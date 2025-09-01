@@ -1,3 +1,124 @@
 {% extends 'base.html' %}
 {% block content %}
+<div class="px-4 pt-3 pb-3 my-3 text-center">
+    <h1 class="fw-bold text-body-emphasis">
+        Choose your Room
+    </h1>
+</div>
+<div class="mb-4 text-center">
+    <p class="">Plan Trip &bull; Pick Airport &bull; Choose Itinerary &bull; <strong>Choose Stay &bull;</strong> Review
+        Trip</p>
+</div>
+<div class="px-4 pt-3 my-3">
+    <h2 class="fw-bold text-body-emphasis text-center">
+        About this Hotel
+    </h2>
+</div>
+<div class="hotel-pictures mb-3">
+    <div id="carousel_1" class="carousel slide">
+        <div class="carousel-inner">
+            {% for photo in hotel_information["photos"] %}     
+            {% if loop.index == 1 %}
+            <div class="carousel-item active">
+                <img src="{{photo}}" class="d-block w-100" alt="..." style="min-height: 350px; min-width: 400px; max-width: 450px; max-height: 350px;">
+            </div>
+            {% else %}
+            <div class="carousel-item">
+                <img src="{{ photo }}" class="d-block w-100" alt="..." style="min-height: 350px; min-width: 400px; max-width: 450px; max-height: 350px;">
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carousel_1" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carousel_1" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</div>
+<div">
+    <hr style="width: 80%; margin: 0 auto;">
+</div>
+<div class=" container px-5 mx-5 justify-content-center">
+    <div class="row px-5 mx-5 pt-3 my-3">
+        <div class="col">
+            <h3 class="fw-bold text-body-emphasis">
+            {{ hotel_information["name"] }}
+            </h3>
+        </div>
+    </div>
+    <div class="row px-5 mx-5 pt-3 my-3">
+        <div class="col">
+            <h4 class="fw-bold text-body-emphasis text-center">
+            Description
+            </h4>
+            <div>
+                {{ hotel_information["description"] | safe }}
+            </div>
+        </div>
+        <div class="col">
+            <h4 class="fw-bold text-body-emphasis text-center">
+            Reviews
+            </h4>
+            {% for review in hotel_information["reviews"] %}
+            <div>
+                <p class="pb-0 mb-0"><strong>{{ review["name"] }}</strong>: {{ review["rating"] }}/ 10</p>
+                <p>{{ review["description"] }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<div">
+    <hr style="width: 80%; margin: 0 auto;">
+</div>
+<div class="px-5 mx-5 mb-5 mt-4 justify-content-center">
+    <h2 class="fw-bold text-body-emphasis text-center">
+        Room Options
+    </h2>
+    <div class="rooms px-5 mt-4 mx-5 justify-content-center">
+        {% for room in room_list %}
+        <a href="" class="box">
+        <div class="room">
+            <div id="corousel_{{loop.index}}" class="carousel slide mb-2">
+                <div class="carousel-inner">
+                    {% for photo in room["photos"] %}
+                    {% if loop.index == 1 %}
+                    <div class="carousel-item active">
+                        <img src="{{photo}}" class="d-block w-100" alt="..." width="200px" height="200px">
+                    </div>
+                    {% else %}
+                    <div class="carousel-item">
+                        <img src="{{ photo }}" class="d-block w-100" alt="..." width="200px" height="200px">
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#corousel_{{loop.index}}"
+                    data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#corousel_{{loop.index}}"
+                    data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
+            <div>
+                <h5 class="hotel-name">
+                    {{ room["name"] }}
+                </h5>
+            </div>
+            <div>
+                {{ room["description"] | safe}}
+            </div>
+        </div>  
+        </a>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}

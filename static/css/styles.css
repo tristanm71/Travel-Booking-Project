@@ -86,3 +86,22 @@
     text-decoration: underline;
 }
 
+.hotel-pictures {
+    display: flex;
+    justify-content: center;
+}
+
+.rooms {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 2rem;
+}
+
+.room {
+    border: 1px solid black;
+    border-radius: 5px;
+    min-height: 250px;
+    min-width: 200px;
+    max-width: 300px;
+    padding: .5rem;
+}
