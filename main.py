@@ -701,6 +701,7 @@ def choose_room(id, trip_id):
     prices = trip.prices_id_list[hotel_id]["roomTypes"]
     room_list = []
     hotel_information = {
+        "id": "",
         "photos": [],
         "description": "",
         "name": "",
@@ -710,6 +711,7 @@ def choose_room(id, trip_id):
         "reviews": []
     }
 
+    hotel_information["id"] = hotel_id
     hotel_information["description"] = trip.details_id_list[hotel_id]["data"]["hotelDescription"]
     hotel_information["name"] = trip.details_id_list[hotel_id]["data"]["name"]
     hotel_information["address"] = trip.details_id_list[hotel_id]["data"]["address"]
@@ -755,14 +757,86 @@ def choose_room(id, trip_id):
             new_bed["type"] = bed["bedType"]
             new_room["beds"].append(new_bed)
     
-        room_list.append(new_room)
-        print(new_room)    
+        room_list.append(new_room)  
 
-    return render_template("room.html", logged_in=current_user.is_authenticated, room_list=room_list, hotel_information=hotel_information)
+    return render_template("room.html", logged_in=current_user.is_authenticated, room_list=room_list, hotel_information=hotel_information, trip_id=trip_id)
 
-@app.route("review_trip", methods=["GET"])
-def review_trip():
-    return render_template("review.html")
+@app.route("/review_trip/<trip_id>/<hotel_id>/<room_id>", methods=["GET"])
+def review_trip(trip_id, hotel_id, room_id):
+    #Set up information to display on this page next
+    trip = db.session.execute(db.select(Trip).where(Trip.id == trip_id))
+    trip = trip.scalar()
+
+    option = trip.itinerary_id_list[trip.itinerary_id]
+    leg_id_list = trip.leg_id_list
+    agent_id_list = trip.agent_id_list
+    segment_id_list = trip.segment_id_list
+    place_id_list = trip.place_id_list
+    
+    itinerary = {
+                "id": "",
+                "leg1_departure": "",
+                "leg1_arrival": "",
+                "leg1_duration": 0,
+                "leg1_stop_count": 0,
+                "leg1_layover_list": [],
+                "leg2_departure": "",
+                "leg2_arrival": "",
+                "leg2_duration": 0,
+                "leg2_stop_count": 0,
+                "leg2_layover_list": [],
+                "price": 0.0,
+                "agent": "",
+                "url": "https://www.skyscanner.com"
+            }
+    
+    #url and id
+    itinerary["url"] = itinerary["url"] + option["pricing_options"][0]["items"][0]["url"]
+    itinerary["id"] = option["id"]
+
+    #get leg 1 data
+    if leg_id_list[option["leg_ids"][0]]:
+        leg = leg_id_list[option["leg_ids"][0]]
+        itinerary["leg1_departure"] = leg["departure"]
+        itinerary["leg1_arrival"] = leg["arrival"]
+        itinerary["leg1_duration"] = int(leg["duration"])
+        itinerary["leg1_stop_count"] = leg["stop_count"]
+
+        print(trip.segment_id_list)  
+        #get all of the segment data and layover information
+        if len(leg["segment_ids"]) > 1:
+            layovers = []
+            layover_duration = 0
+            #find the difference between a segments arrival and departure to get layover
+            for i in range(0, len(leg["segment_ids"]) - 1):
+                if segment_id_list[leg["segment_ids"][i]]:
+                    segment1 = segment_id_list[leg["segment_ids"][i]]
+                    segment2 = segment_id_list[leg["segment_ids"][i + 1]]
+                    segment1_arrival = datetime.fromisoformat(segment1["arrival"])
+                    segment2_departure = datetime.fromisoformat(segment2["departure"])
+                    difference = segment2_departure - segment1_arrival
+                    difference = difference.total_seconds()
+                    hours = int(difference // 3600)
+                    mins = int((difference % 3600) / 60)
+                    layover_place = place_id_list[segment1["destination_place_id"]]["display_code"]
+                    formatted_layover = f"{hours}h {mins}m layover at {layover_place}"
+                    if len(layovers) > 0:
+                        formatted_layover = ", " + formatted_layover
+                    layovers.append(formatted_layover)
+                    layover_duration += (difference / 60)
+                else:
+                    flash("Server error")
+                    return redirect(url_for("home"))
+            #subtract the layover time from the total trip duration
+            itinerary['leg1_duration'] -= int(layover_duration) 
+            itinerary["leg1_layover_list"] = layovers
+        else:
+            flash("Server error")
+            return redirect(url_for("home"))
+        
+
+    
+    return render_template("review.html", logged_in=current_user.is_authenticated)
 
 if __name__ == "__main__":
     app.run(debug=True)

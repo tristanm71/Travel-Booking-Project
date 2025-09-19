@@ -81,7 +81,7 @@
     </h2>
     <div class="rooms px-5 mt-4 mx-5 justify-content-center">
         {% for room in room_list %}
-        <a href="" class="box">
+        <a href="{{ url_for('review_trip', room_id=room['id'], trip_id=trip_id, hotel_id=hotel_information['id']) }}" class="box">
         <div class="room">
             <div id="corousel_{{loop.index}}" class="carousel slide mb-2">
                 <div class="carousel-inner">
