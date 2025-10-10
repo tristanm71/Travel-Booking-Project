@@ -2,4 +2,4 @@ This is my Travel Booking Project, which provides end-to-end travel planning. Cu
 I built this using Python, HTML, CSS, and JavaScript
 Let me know if I should add anything. 
 
-Here is the deployed project: 
+Here is the deployed project: https://tristanm71.github.io/Travel-Booking-Project/
